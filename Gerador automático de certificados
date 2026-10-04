@@ -1,0 +1,60 @@
+function onFormSubmit(e) {
+  try {
+    // Pega a linha enviada pelo Form
+    var linha = e.values;
+
+    // Ajuste os números conforme as colunas da sua planilha
+    var nome = linha[1];      // Coluna B → Nome completo
+    var email = linha[2];     // Coluna C → E-mail
+
+    // IDs dos arquivos
+    var TEMPLATE_ID = "COLOQUE_AQUI_O_ID_DO_SEU_SLIDE";       // seu Google Slides
+    var PASTA_DESTINO_ID = "COLOQUE_AQUI_O_ID_DA_PASTA";     // pasta onde salvar PDFs
+
+    // Abre o template e faz uma cópia
+    var template = DriveApp.getFileById(TEMPLATE_ID);
+    var copia = template.makeCopy("Certificado - " + nome, DriveApp.getFolderById(PASTA_DESTINO_ID));
+    var slide = SlidesApp.openById(copia.getId());
+
+    // Substitui o {{NOME}} no slide pelo nome
+    slide.getSlides().forEach(function(s) {
+      s.getShapes().forEach(function(shape) {
+        try {
+          if (shape.getText) {
+            shape.getText().replaceAllText("{{NOME}}", nome);
+          }
+        } catch(err) {
+          // Forma sem texto, ignora
+        }
+      });
+    });
+
+    slide.saveAndClose();
+
+    // Converte para PDF
+    var pdf = copia.getAs(MimeType.PDF);
+
+    // Envia por e-mail
+    MailApp.sendEmail({
+      to: email,
+      subject: "Certificado de Participação - " + nome,
+      body: "Olá " + nome + ",\n\nSegue em anexo o seu certificado. Parabéns!\n\nAtenciosamente.",
+      attachments: [pdf]
+    });
+
+    Logger.log("Certificado enviado para: " + email);
+
+    // A cópia do Slide já está na pasta de destino, não precisa apagar
+
+  } catch(error) {
+    Logger.log("Erro ao gerar/enviar certificado: " + error);
+  }
+}
+
+// Função para teste manual
+function testNow() {
+  var e = {
+    values: ["2025-09-13 16:00", "Teste da Silva", "seu-email@gmail.com"]
+  };
+  onFormSubmit(e);
+}
